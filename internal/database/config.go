@@ -5,38 +5,38 @@ import (
 	"os"
 )
 
-func OpenOrCreateDatabase(path string) (*Database, error) {
-	var file *os.File
-	var err error
-
-	if _, err = os.Stat(path); os.IsNotExist(err) {
-		file, err = os.Create(path)
-		if err != nil {
-			return nil, fmt.Errorf("creating database file: %w", err)
-		}
-	} else if err == nil {
-		file, err = os.OpenFile(path, os.O_RDWR, 0644)
-		if err != nil {
-			return nil, fmt.Errorf("opening database file: %w", err)
-		}
-	} else {
-		return nil, fmt.Errorf("stat database file: %w", err)
+func Open(cfg Config) (*Database, error) {
+	if cfg.Path == "" {
+		cfg.Path = "./.mydb.db"
 	}
 
-	return &Database{
-		file: file,
-	}, nil
+	file, err := os.OpenFile(cfg.Path, os.O_RDWR|os.O_CREATE, 0o644)
+	if err != nil {
+		return nil, fmt.Errorf("open database file %q: %w", cfg.Path, err)
+	}
+
+	db := &Database{
+		file:   file,
+		cfg:    cfg,
+		closed: false,
+	}
+
+	return db, nil
 }
 
 func (db *Database) Close() error {
-	if db.closed {
+	if db == nil || db.closed {
 		return nil
 	}
+	db.closed = true
 
+	if db.file == nil {
+		return nil
+	}
 	if err := db.file.Close(); err != nil {
-		return err
+		return fmt.Errorf("close database file: %w", err)
 	}
 
-	db.closed = true
+	db.file = nil
 	return nil
 }
