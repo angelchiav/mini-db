@@ -20,5 +20,17 @@ type TableSchema struct {
 
 type Column struct {
 	Name string
-	// Type ColumnType
+	Type byte
+}
+
+type Value struct {
+	Type byte
+	I64  int64
+	Str  string
+}
+
+type Record struct {
+	Type    byte
+	Version byte
+	Payload []byte
 }

@@ -2,6 +2,7 @@ package database
 
 import (
 	"fmt"
+	"io"
 	"os"
 )
 
@@ -39,4 +40,31 @@ func (db *Database) Close() error {
 
 	db.file = nil
 	return nil
+}
+
+func readRecord(r io.Reader) (*Record, error) {
+	var m [4]byte
+	if _, err := io.ReadFull(r, m[:]); err != nil {
+		return nil, err
+	}
+	if m != magic {
+		return nil, fmt.Errorf("bad magic: %v", m)
+	}
+
+	hdr := make([]byte, 2)
+	if _, err := io.ReadFull(r, hdr); err != nil {
+		return nil, err
+	}
+	typ, ver := hdr[0], hdr[1]
+
+	n, err := readU32(r)
+	if err != nil {
+		return nil, err
+	}
+	payload := make([]byte, n)
+	if _, err := io.ReadFull(r, payload); err != nil {
+		return nil, err
+	}
+
+	return &Record{Type: typ, Version: ver, Payload: payload}, nil
 }
